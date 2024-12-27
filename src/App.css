@@ -1,5 +1,15 @@
 .App {
   text-align: center;
+  font-family: "Noto Sans", sans-serif;
+  font-weight: 400;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 16px 20px;
+  box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6, strong {
+  font-weight: 700;
 }
 
 .App-logo {
@@ -12,16 +22,12 @@
     animation: App-logo-spin infinite 20s linear;
   }
 }
-
 .App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  background-color: #fff;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px;
 }
 
 .App-link {
@@ -36,3 +42,5 @@
     transform: rotate(360deg);
   }
 }
+
+/*# sourceMappingURL=app.css.map */

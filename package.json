@@ -11,10 +11,13 @@
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.7.9",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.2",
     "mui-chips-input": "^4.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-scripts": "5.0.1",
+    "react-spinners": "^0.15.0",
     "sass": "^1.83.0",
     "web-vitals": "^2.1.4"
   },
@@ -22,7 +25,8 @@
     "dev": "concurrently \"yarn start\" \"sass --watch src/app.scss:src/app.css\"",
     "start": "react-scripts start",
     "build-css": "sass --watch src/app.scss:src/app.css",
-    "build": "react-scripts build"
+    "build": "react-scripts build",
+    "serve": "serve -s build"
   },
   "eslintConfig": {
     "extends": [
@@ -44,5 +48,6 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
-  }
+  },
+  "proxy": "https://open.shopline.io"
 }

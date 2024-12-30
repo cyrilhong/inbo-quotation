@@ -8,7 +8,13 @@
   box-sizing: border-box;
 }
 
-h1, h2, h3, h4, h5, h6, strong {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+strong {
   font-weight: 700;
 }
 
@@ -41,6 +47,21 @@ h1, h2, h3, h4, h5, h6, strong {
   to {
     transform: rotate(360deg);
   }
+}
+.shopline-button-container button {
+  height: 40px;
+  width: 60px !important;
+  background-image: url("../src/img/cart.svg") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+.shopline-button-container [class^=dense-module_container] {
+  display: none !important;
+}
+.shopline-button-container [class^=index-module_container] {
+  width: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /*# sourceMappingURL=app.css.map */

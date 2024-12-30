@@ -1,23 +1,37 @@
-import React, { Component, useState } from 'react'
+import React, { useEffect, useState, } from 'react'
 import styled from '@emotion/styled';
+import axios from 'axios';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import AppsIcon from '@mui/icons-material/Apps';
 import TextField from '@mui/material/TextField';
-import { MuiChipsInput } from 'mui-chips-input'
 import { colors } from '../variables';
 import Button from '@mui/material/Button';
-export default function Filter({setListView}) {
+import Autocomplete from '@mui/material/Autocomplete';
+import downloadComponentInPDF from './savePDF';
+import BeatLoader from "react-spinners/BeatLoader";
+const Filter = ({ setListView, setProductsData, setGlobalMemberTier }) => {
+    const [tags, setTags] = useState([]);
     const [listView, setLocalListView] = useState(true)
-    const handleListView = (event, nextListView) => {
-        setLocalListView(nextListView);
-        setListView(nextListView); // Call the function passed from the parent
-    };
+    const [nationCategory, setNationCategory] = useState([]);
+    const [processCategory, setProcessCategory] = useState([]);
     const [nation, setNation] = React.useState([])
     const [processing, setProcessing] = React.useState([])
     const [searchTerm, setSearchTerm] = useState('');
-    
+    const [allProducts, setAllProducts] = useState([])
+    const [memberTier, setMemberTier] = useState([])
+    const [currentSearchResults, setCurrentSearchResults] = useState([]);
+    const [loading, setLoading] = useState(false);
+    let [color, setColor] = useState("#ffffff");
+
+    const handleListView = (event, nextListView) => {
+        console.log('nextListView:', nextListView); // Log the value of nextListView
+        const validListView = nextListView === true || nextListView === false ? nextListView : true; // Ensure it's a boolean
+        setLocalListView(validListView);
+        setListView(validListView);
+    };
+
 
     const handleNationChange = (newChips) => {
         setNation(newChips)
@@ -25,16 +39,256 @@ export default function Filter({setListView}) {
     const handleProcessingChange = (newChips) => {
         setProcessing(newChips)
     }
-    const handleSearchChange = (event) => {
-        setSearchTerm(event.target.value); // Update search term
+    const handleSearchChange = () => {
+        const filteredProducts = allProducts.filter(product => {
+            return (searchTerm.length === 0 ||
+                searchTerm.some(term => {
+                    const seoKeywords = Array.isArray(product.seo_keywords) ? product.seo_keywords : [product.seo_keywords];
+                    return seoKeywords.some(tag => tag && tag.toLowerCase().includes(term.toLowerCase())) ||
+                        (product.tags && product.tags.some(tag => tag.toLowerCase().includes(term.toLowerCase()))) ||
+                        product.title_translations['zh-hant'].toLowerCase().includes(term.toLowerCase());
+                })) &&
+                (Array.isArray(processing) && processing.length === 0 ||
+                    processing.some(proc => {
+                        const productIds = proc.products.map(p => p.id);
+                        return productIds.includes(product.id);
+                    })) &&
+                (Array.isArray(nation) && nation.length === 0 ||
+                    nation.some(nat => {
+                        return nat.products.some(nationProduct => nationProduct.id === product.id);
+                    }));
+        });
+        // console.log(filteredProducts);
+        // debugger
+        setProductsData(filteredProducts);
+        setCurrentSearchResults(filteredProducts);
+    };
+
+    const fetchProducts = async () => {
+        setLoading(true); // Start loading
+        try {
+            const response = await axios.get('/v1/products', {
+                headers: {
+                    Authorization: `Bearer ${process.env.REACT_APP_BEARER_TOKEN}`
+                },
+                params: {
+                    per_page: 200,
+                },
+            });
+
+            const priceTierMap = {};
+            const validProducts = response.data.items.filter(product => {
+                // Check if product_price_tiers is not empty and at least one priceTier has a valid variation_key
+                return product.product_price_tiers.length > 0 &&
+                    product.product_price_tiers.some(priceTier => priceTier.variation_key !== null);
+            });
+
+            // Populate the priceTierMap with valid products
+            validProducts.forEach(product => {
+                product.product_price_tiers.forEach(priceTier => {
+                    // Initialize the priceTierMap entry
+                    priceTierMap[priceTier.variation_key] = {
+                        ...priceTier,
+                        tierName: null // Initialize tierName as null
+                    };
+                });
+            });
+
+
+            const updatedProducts = response.data.items.map(product => {
+                // 過濾有效的 product_price_tiers，確保 variation_key 存在
+                product.product_price_tiers = product.product_price_tiers.filter(priceTier => priceTier.variation_key);
+
+                // 更新 product_price_tiers
+                product.product_price_tiers.forEach(priceTier => {
+                    // 找到對應的變體
+                    const matchingVariation = product.variations.find(variation => variation.id === priceTier.variation_key);
+                    if (matchingVariation) {
+                        // 填充 variation_details
+                        priceTier.variation_details = matchingVariation;
+
+                        // 計算 avg_price，避免除以 0
+                        if (matchingVariation.weight > 0) {
+                            priceTier.member_price.avg_price = Math.round(priceTier.member_price.dollars / matchingVariation.weight);
+                        } else {
+                            priceTier.member_price.avg_price = null; // 處理無效的 weight
+                        }
+                    }
+
+                    // 填充會員層級詳細資料
+                    const matchingTier = memberTier.find(tier => tier.id === priceTier.membership_tier_id);
+                    if (matchingTier) {
+                        priceTier.membership_tier_data = matchingTier;
+                    }
+                });
+                // console.log(product);
+
+                return product;
+            });
+
+            const allTags = response.data.items
+                .flatMap(product => product.tags)
+                .filter((tag, index, self) => self.indexOf(tag) === index);
+
+            const filteredProducts = updatedProducts.filter(product => product.status === "active" && product.quantity > 0 && product.product_price_tiers.length > 0);
+            setTags(allTags);
+            setProductsData(filteredProducts);
+            setAllProducts(filteredProducts);
+            setCurrentSearchResults(filteredProducts);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        } finally {
+            setLoading(false); // Finish loading
+        }
+    };
+
+    const fetchProductsByCategory = async (nation) => {
+        try {
+            const response = await axios.get(`/v1/products/search?category_id=${nation.id}`, {
+                headers: {
+                    Authorization: `Bearer ${process.env.REACT_APP_BEARER_TOKEN}`
+                }
+            });
+
+            // console.log('分類產品:', response.data.items);
+            return response.data.items;
+        } catch (error) {
+            console.error('Error fetching products by category:', error);
+        }
+    };
+
+    const searchByNation = async () => {
+        try {
+            const categoryResponse = await axios.get(`/v1/categories/62c680be6b88140023b63db0`, {
+                headers: {
+                    Authorization: `Bearer ${process.env.REACT_APP_BEARER_TOKEN}`
+                }
+            });
+
+            const nationList = categoryResponse.data.children.map(child => ({
+                id: child.id,
+                title: child.name_translations['zh-hant'] // 獲取中文名稱
+            }));
+
+            const responses = await Promise.all(nationList.map(nation =>
+                fetchProductsByCategory(nation)
+            ));
+            // console.log(responses);
+
+            const updatedNationList = nationList.map((nation, index) => ({
+                ...nation,
+                products: (responses[index] || []).filter(product => product.status === "active" && product.quantity > 0)
+                    .map(({ id, title_translations }) => ({ id, title_translations })) // Keep id and title_translations
+            })).filter(nation => nation.products.length > 0);
+
+            setNationCategory(updatedNationList); // 將結果存入 nationCategory 狀態
+
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        }
+    };
+    const getMemberTier = async () => {
+        try {
+            const response = await axios.get(`v1/membership_tiers`, {
+                headers: {
+                    Authorization: `Bearer ${process.env.REACT_APP_BEARER_TOKEN}`
+                }
+            });
+
+            // console.log('會員等級:', response.data);
+            setMemberTier(response.data);
+            setGlobalMemberTier(response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching products by category:', error);
+        }
+    };
+
+    const searchByProcess = async () => {
+        try {
+            const categoryResponse = await axios.get(`/v1/categories/62c5b16078315b002645e04a`, {
+                headers: {
+                    Authorization: `Bearer ${process.env.REACT_APP_BEARER_TOKEN}`
+                }
+            });
+
+            const processList = categoryResponse.data.children.map(child => ({
+                id: child.id,
+                title: child.name_translations['zh-hant']
+            }));
+
+            const responses = await Promise.all(processList.map(process =>
+                fetchProductsByCategory(process)
+            ));
+            // console.log(responses);
+
+            const updatedProcessList = processList.map((process, index) => ({
+                ...process,
+                products: (responses[index] || []).filter(product => product.status === "active" && product.quantity > 0)
+                    .map(({ id, title_translations }) => ({ id, title_translations }))
+            })).filter(process => process.products.length > 0);
+
+            setProcessCategory(updatedProcessList);
+
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchProducts();
+        searchByNation();
+        searchByProcess();
+        getMemberTier();
+    }, []);
+
+
+    const handleDownload = async () => {
+        // Step 1: 備份當前的 `productsData`
+        const backup = [...currentSearchResults]; // 深拷貝當前資料
+        console.log("Backup created:", backup);
+
+        // Step 2: 切換到所有產品
+        setProductsData([...allProducts]); // 設定為全部產品
+        console.log("Switched to all products:", allProducts);
+
+        // 等待 React 更新狀態
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Step 3: 下載 PDF
+        try {
+            const el = document.getElementById("root");
+            await downloadComponentInPDF(el);
+            console.log("PDF download completed");
+        } catch (error) {
+            console.error("Error during PDF download:", error);
+        }
+
+        // Step 4: 恢復原本的資料
+        setProductsData(backup); // 恢復為原始的資料
+        console.log("Restored productsData:", backup);
+    };
+    const cssOverride = {
+        display: "block",
+        margin: "0 auto",
+        borderColor: colors.cta,
     };
     return (
         <Wrapper className='filter'>
+            <ModalWrapper loading={loading}>
+                <BeatLoader
+                    color={colors.white}
+                    loading={loading}
+                    cssOverride={cssOverride}
+                    size={30}
+                />
+            </ModalWrapper>
             <div className="upper">
                 <Button
                     variant="contained"
                     sx={{ backgroundColor: colors.orange, color: 'white' }}
                     size='large'
+                    onClick={handleDownload}
                 >
                     下載豆單
                 </Button>
@@ -98,7 +352,7 @@ export default function Filter({setListView}) {
                         </ToggleButton>
                     </ToggleButtonGroup>
                 </div>
-                <div className="price">
+                {/* <div className="price">
                     <label>
                         價格(NT$)/公斤
                     </label>
@@ -125,52 +379,100 @@ export default function Filter({setListView}) {
                             }}
                         />
                     </div>
-                </div>
+                </div> */}
                 <div className="nation">
                     <label>
                         國家產區
                     </label>
-                    <MuiChipsInput
-                        value={nation}
-                        onChange={handleNationChange}
+                    <Autocomplete
+                        multiple
+                        options={nationCategory}
+                        getOptionLabel={(nationCategory) => nationCategory.title}
+                        defaultValue={[]}
+                        onChange={(event, newValue) => {
+                            handleNationChange(newValue);
+                        }}
                         size='small'
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                variant="outlined"
+                                size='small'
+                                label=""
+                                placeholder="輸入國家"
+                            />
+                        )}
                     />
                 </div>
                 <div className="processing">
                     <label>
                         處理法
                     </label>
-                    <MuiChipsInput
-                        value={processing}
-                        onChange={handleProcessingChange}
+                    <Autocomplete
+                        multiple
+                        options={processCategory}
+                        getOptionLabel={(processCategory) => processCategory.title}
+                        defaultValue={[]}
+                        onChange={(event, newValue) => {
+                            handleProcessingChange(newValue);
+                        }}
                         size='small'
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                variant="outlined"
+                                size='small'
+                                label=""
+                                placeholder="輸入處理法"
+                            />
+                        )}
                     />
                 </div>
                 <div className="tag">
+                    {/* {JSON.stringify(tags)} */}
                     <label>
                         關鍵字搜尋
                     </label>
-                    <TextField
-                        value={searchTerm}
-                        onChange={handleSearchChange}
-                        placeholder="輸入關鍵字..."
-                        variant="outlined"
+                    <Autocomplete
+                        multiple
+                        freeSolo
+                        options={tags}
+                        getOptionLabel={(option) => option}
+                        defaultValue={[]}
                         size='small'
+                        onChange={(event, newValue) => {
+                            setSearchTerm(newValue);
+                        }}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                variant="outlined"
+                                size='small'
+                                label=""
+                                placeholder="輸入關鍵字..."
+                            />
+                        )}
                     />
                 </div>
                 <div className="search">
                     <Button
                         variant="contained"
-                        sx={{ backgroundColor: colors.primary, color: colors.white }}
-                        size='small'
+                        onClick={handleSearchChange}
+                        sx={{ backgroundColor: colors.cta, color: colors.white }}
+                        size='medium'
                     >
                         搜尋
                     </Button>
                 </div>
             </div>
+            {/* nation: {JSON.stringify(nation)} <br />
+            processing: {JSON.stringify(processing)}<br />
+            searchTerm: {JSON.stringify(searchTerm)} */}
         </Wrapper>
     )
 }
+
+export default Filter;
 
 const Wrapper = styled.div`
     display: flex;
@@ -186,6 +488,9 @@ const Wrapper = styled.div`
         flex-direction: column;
         align-items: start;
         gap: 12px;
+        .Mui-selected{
+            pointer-events: none;
+        }
     }
     .price{
         display: flex;
@@ -205,18 +510,27 @@ const Wrapper = styled.div`
         flex-direction: column;
         align-items: start;
         gap: 12px;
+        .MuiAutocomplete-root{
+            width: 100%;
+        }
     }
     .processing{
         display: flex;
         flex-direction: column;
         align-items: start;
         gap: 12px;
+        .MuiAutocomplete-root{
+            width: 100%;
+        }
     }
     .tag{
         display: flex;
         flex-direction: column;
         align-items: start;
         gap: 12px;
+        .MuiAutocomplete-root{
+            width: 100%;
+        }
     }
     .search{
         margin-top: 36px;
@@ -252,3 +566,19 @@ const Wrapper = styled.div`
         }
     }
 `
+
+const ModalWrapper = styled.div`
+    position: fixed;
+    pointer-events: none;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transition: opacity 0.3s ease-in-out;
+    opacity: ${props => props.loading ? 1 : 0};
+    background-color: rgba(0, 0, 0, 0.5); /* Black with transparency */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Ensure it's on top */
+`;

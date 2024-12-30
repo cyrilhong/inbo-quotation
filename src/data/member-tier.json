@@ -1,0 +1,146 @@
+[
+    {
+        "id": "62ea8eb9f7493500173c7959",
+        "level": 1,
+        "name_translations": {
+            "zh-hant": "銅卡會員"
+        },
+        "membership_tier_rules": [
+            {
+                "_id": "66ea6b135f000f000d0ac6e2",
+                "condition_interval": {
+                    "type": "single_purchase",
+                    "time_value": "12",
+                    "time_unit": "month"
+                },
+                "created_at": null,
+                "effect_interval": {
+                    "type": "unlimited",
+                    "time_unit": "month"
+                },
+                "effect_type": "upgrade",
+                "total_spending": {
+                    "cents": 30000,
+                    "currency_symbol": "NT$",
+                    "currency_iso": "TWD",
+                    "label": "NT$30,000",
+                    "dollars": 30000
+                },
+                "updated_at": null
+            }
+        ],
+        "promotions": []
+    },
+    {
+        "id": "62e7a0849d372a00320522b5",
+        "level": 2,
+        "name_translations": {
+            "zh-hant": "銀卡會員"
+        },
+        "membership_tier_rules": [
+            {
+                "_id": "66399fdf712a7100141dd855",
+                "condition_interval": {
+                    "type": "within_interval",
+                    "time_value": "12",
+                    "time_unit": "month"
+                },
+                "created_at": null,
+                "effect_interval": {
+                    "type": "within_interval",
+                    "time_value": "12",
+                    "time_unit": "month"
+                },
+                "effect_type": "upgrade",
+                "total_spending": {
+                    "cents": 60000,
+                    "currency_symbol": "NT$",
+                    "currency_iso": "TWD",
+                    "label": "NT$60,000",
+                    "dollars": 60000
+                },
+                "updated_at": null
+            },
+            {
+                "_id": "66399fdf712a7100141dd856",
+                "condition_interval": {
+                    "type": "within_interval",
+                    "time_value": "12",
+                    "time_unit": "month"
+                },
+                "created_at": null,
+                "effect_interval": {
+                    "type": "within_interval",
+                    "time_value": "12",
+                    "time_unit": "month"
+                },
+                "effect_type": "extend",
+                "total_spending": {
+                    "cents": 60000,
+                    "currency_symbol": "NT$",
+                    "currency_iso": "TWD",
+                    "label": "NT$60,000",
+                    "dollars": 60000
+                },
+                "updated_at": null
+            }
+        ],
+        "promotions": []
+    },
+    {
+        "id": "62e7a0a905d3a2002671004b",
+        "level": 3,
+        "name_translations": {
+            "zh-hant": "金卡會員"
+        },
+        "membership_tier_rules": [
+            {
+                "_id": "672974d1cabb39000b369ff5",
+                "condition_interval": {
+                    "type": "within_interval",
+                    "time_value": "12",
+                    "time_unit": "month"
+                },
+                "created_at": null,
+                "effect_interval": {
+                    "type": "within_interval",
+                    "time_value": "3",
+                    "time_unit": "month"
+                },
+                "effect_type": "upgrade",
+                "total_spending": {
+                    "cents": 100000,
+                    "currency_symbol": "NT$",
+                    "currency_iso": "TWD",
+                    "label": "NT$100,000",
+                    "dollars": 100000
+                },
+                "updated_at": null
+            },
+            {
+                "_id": "672974d1cabb39000b369ff6",
+                "condition_interval": {
+                    "type": "within_interval",
+                    "time_value": "3",
+                    "time_unit": "month"
+                },
+                "created_at": null,
+                "effect_interval": {
+                    "type": "within_interval",
+                    "time_value": "3",
+                    "time_unit": "month"
+                },
+                "effect_type": "extend",
+                "total_spending": {
+                    "cents": 60000,
+                    "currency_symbol": "NT$",
+                    "currency_iso": "TWD",
+                    "label": "NT$60,000",
+                    "dollars": 60000
+                },
+                "updated_at": null
+            }
+        ],
+        "promotions": []
+    }
+]

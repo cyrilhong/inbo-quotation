@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React from 'react';
 import styled from '@emotion/styled';
 import Button from '@mui/material/Button';
 import { colors, mediaQueries } from '../variables';
 import Cart from '../img/cart.svg'
-const Product = ({ listView, imageUrl, titleZh, titleEng, price }) => {
+const Product = (props) => {
+  const { listView, imageUrl, titleZh, titleEng, desc, product_price_tiers, userMemberTier, memberTier } = props;
+  const NoMemberInfo = () => {
+    // const lowestTier = memberTier.reduce((prev, curr) => (prev.level < curr.level ? prev : curr));
+    // return lowestTier.name_translations['zh-hant'];
+    return '一般會員';
+  }
   return (
     <Wrapper listView={listView} className={listView ? '' : 'grid'}>
+      {/* nation: {JSON.stringify(props.props.nation)} <br />
+      processing: {JSON.stringify(props.props.processing)} */}
       <div className="info">
         <div className="cover">
           <img src={imageUrl} alt="Product" />
@@ -16,11 +24,33 @@ const Product = ({ listView, imageUrl, titleZh, titleEng, price }) => {
               <div className="title-zh">{titleZh}</div>
               <div className="title-eng">{titleEng}</div>
             </div>
+            {/* {JSON.stringify(props.props.link)} */}
             <div className="purchase">
-              <Button variant="contained">
+              <Button
+                variant="contained"
+                onClick={() => {
+                  window.open(`${process.env.REACT_APP_API_URL}${props.props.link}`, '_blank'); // Replace with your desired URL 
+                }}
+              >
                 <img src={Cart} alt="Cart" />
               </Button>
             </div>
+          </div>
+          <div className="desc">
+            {desc}
+          </div>
+          <div className="purchase">
+            <Button
+              variant="contained"
+              onClick={() => {
+                window.open(`${process.env.REACT_APP_API_URL}${props.props.link}`, '_blank'); // Replace with your desired URL 
+              }}
+            >
+              <img
+                src={Cart}
+                alt="Cart"
+              />
+            </Button>
           </div>
         </div>
       </div>
@@ -28,40 +58,48 @@ const Product = ({ listView, imageUrl, titleZh, titleEng, price }) => {
         <div className="main-price">
           <div className="title">定價</div>
           <div className="list">
-            <div className="tier">
-              <div className="price-tag">NT$ {price}/kg</div>
-              <div className="package">1kg(真空包裝)</div>
-            </div>
-            <div className="tier">
-              <div className="price-tag">NT$ 500/kg</div>
-              <div className="package">1kg(真空包裝)</div>
-            </div>
-            <div className="tier">
-              <div className="price-tag">NT$ 500/kg</div>
-              <div className="package">1kg(真空包裝)</div>
-            </div>
+            {product_price_tiers
+              .filter(item => item.membership_tier_id === '62ea8eb9f7493500173c7959' && item?.variation_details?.quantity > 0)
+              .sort((a, b) => (a.variation_details.weight || 0) - (b.variation_details.weight || 0)) // Sort by weight
+              .map(item => (
+                <div className="tier" key={item._id}>
+                  <div className="price-tag">NT$ {item.member_price.avg_price}/kg</div>
+                  <div className="package">{item?.variation_details.fields_translations?.['zh-hant']}</div>
+                </div>
+              ))}
+
           </div>
         </div>
         <div className="member-price">
-          <div className="title">銅卡會員</div>
+          <div className="title">{userMemberTier ? userMemberTier.name_translations?.['zh-hant'] : NoMemberInfo()}</div>
           <div className="list">
-            <div className="tier">
-              <div className="price-tag">NT$ 500/kg</div>
-              <div className="package">1kg(真空包裝)</div>
-            </div>
-            <div className="tier">
-              <div className="price-tag">NT$ 500/kg</div>
-              <div className="package">1kg(真空包裝)</div>
-            </div>
-            <div className="tier">
-              <div className="price-tag">NT$ 500/kg</div>
-              <div className="package">1kg(真空包裝)</div>
-            </div>
+            {product_price_tiers
+              .filter(item => item.membership_tier_id === (userMemberTier ? userMemberTier.id : '62ea8eb9f7493500173c7959')
+                && item?.variation_details?.quantity > 0
+              )
+              .sort((a, b) => (a.variation_details?.weight || 0) - (b.variation_details?.weight || 0)) // Sort by weight
+              .map(item =>
+              (
+                <div className="tier" key={item._id}>
+                  {/* {JSON.stringify(item)} */}
+                  <div className="price-tag">NT$ {item.member_price.avg_price}/kg</div>
+                  <div className="package">{item?.variation_details?.fields_translations?.['zh-hant']}：{item.member_price.label}</div>
+                  {/* <div className="purchase">
+                    <ShoplineButtonFrame variationId={item.variation_key} productID={item.product_id} />
+                  </div> */}
+                </div>
+              ))}
+
           </div>
         </div>
       </div>
       <div className="listview-purchase">
-        <Button variant="contained">
+        <Button
+          variant="contained"
+          onClick={() => {
+            window.open(`${process.env.REACT_APP_API_URL}${props.props.link}`, '_blank'); // Replace with your desired URL 
+          }}
+        >
           <img src={Cart} alt="Cart" />
         </Button>
       </div>
@@ -70,6 +108,7 @@ const Product = ({ listView, imageUrl, titleZh, titleEng, price }) => {
 };
 
 export default Product;
+
 const Wrapper = styled.div`
   padding: 16px;
   background-color: ${colors.gray};
@@ -77,6 +116,7 @@ const Wrapper = styled.div`
   display: flex;
   flex-direction: row;
   gap:20px;
+  width: 100%;
   .info{
     display: flex;
     flex: 1;
@@ -85,9 +125,8 @@ const Wrapper = styled.div`
     .cover{
       display: ${props => props.listView ? 'none' : 'block'};
       img{
-        width: 100%;
+        width: 200px;
         display: flex;
-        max-width: 152px;
         height: 200px;
         object-fit: cover;
       }

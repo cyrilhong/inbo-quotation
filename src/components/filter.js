@@ -152,7 +152,13 @@ const Filter = ({ setListView, setProductsData, setGlobalMemberTier, setGlobalPr
                 .flatMap(product => product.tags)
                 .filter((tag, index, self) => self.indexOf(tag) === index);
 
-            const filteredProducts = updatedProducts.filter(product => product.status === "active" && product.quantity > 0 && product.product_price_tiers.length > 0);
+            // 過濾掉 tags 有 '專案活動' 的產品
+            const filteredProducts = updatedProducts.filter(product =>
+                product.status === "active" &&
+                product.quantity > 0 &&
+                product.product_price_tiers.length > 0 &&
+                !(product.tags && product.tags.some(tag => tag === "專案活動"))
+            );
             setTags(allTags);
             setProductsData(filteredProducts);
             setAllProducts(filteredProducts);
